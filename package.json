@@ -1,0 +1,28 @@
+{
+  "name": "gradient-from-image",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HawkeyePierce89/gradient-from-image.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/HawkeyePierce89/gradient-from-image/issues"
+  },
+  "homepage": "https://github.com/HawkeyePierce89/gradient-from-image#readme",
+  "devDependencies": {
+    "jsdom": "^28.1.0",
+    "vitest": "^4.1.0"
+  }
+}

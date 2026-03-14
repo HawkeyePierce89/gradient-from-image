@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gradient From Image</title>
+  <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+  <header class="app-header">
+    <h1>Gradient From Image</h1>
+    <p class="subtitle">Extract color gradients along any line on your image</p>
+  </header>
+
+  <main class="app-layout">
+    <!-- Left Panel: Image -->
+    <section class="image-panel">
+      <div class="upload-zone" id="uploadZone">
+        <p>Drop image here or</p>
+        <button class="btn btn-primary" id="uploadBtn">Upload Image</button>
+        <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" hidden>
+        <p class="upload-hint">PNG, JPEG, WEBP</p>
+      </div>
+
+      <div class="canvas-viewport" id="canvasViewport" hidden>
+        <div class="canvas-container" id="canvasContainer">
+          <canvas id="displayCanvas"></canvas>
+          <canvas id="overlayCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="image-toolbar" id="imageToolbar" hidden>
+        <div class="image-info">
+          <span id="imageDimensions"></span>
+          <span id="imageOrientation"></span>
+        </div>
+        <div class="zoom-controls">
+          <button class="btn btn-icon" id="zoomOutBtn" title="Zoom out">−</button>
+          <span class="zoom-level" id="zoomLevel">100%</span>
+          <button class="btn btn-icon" id="zoomInBtn" title="Zoom in">+</button>
+          <button class="btn btn-icon" id="zoomResetBtn" title="Fit to view">Fit</button>
+        </div>
+        <div class="crop-controls">
+          <button class="btn btn-secondary" id="startCropBtn">Start Crop</button>
+          <button class="btn btn-primary" id="applyCropBtn" hidden>Apply Crop</button>
+          <button class="btn btn-ghost" id="resetCropBtn" hidden>Reset Crop</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Panel: Settings + Results -->
+    <section class="settings-panel" id="settingsPanel">
+      <div class="settings-group">
+        <h3>Direction</h3>
+        <div class="radio-group">
+          <label><input type="radio" name="direction" value="horizontal" checked> Horizontal</label>
+          <label><input type="radio" name="direction" value="vertical"> Vertical</label>
+          <label><input type="radio" name="direction" value="diagonal-tl-br"> Diagonal ↘</label>
+          <label><input type="radio" name="direction" value="diagonal-tr-bl"> Diagonal ↙</label>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3>Traversal</h3>
+        <div class="radio-group">
+          <label><input type="radio" name="traversal" value="forward" checked> Forward</label>
+          <label><input type="radio" name="traversal" value="reverse"> Reverse</label>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3>Offset <span class="value-display" id="offsetValue">50%</span></h3>
+        <div class="slider-row">
+          <input type="range" id="offsetSlider" min="0" max="100" value="50" step="0.5">
+          <input type="number" id="offsetInput" min="0" max="100" value="50" step="0.5" class="num-input">
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3>Step <span class="value-display" id="stepValue">10%</span></h3>
+        <div class="slider-row">
+          <input type="range" id="stepSlider" min="1" max="50" value="10" step="1">
+          <input type="number" id="stepInput" min="1" max="100" value="10" step="1" class="num-input">
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3>Sample Area</h3>
+        <div class="radio-group">
+          <label><input type="radio" name="sampleSize" value="1" checked> 1×1</label>
+          <label><input type="radio" name="sampleSize" value="3"> 3×3</label>
+          <label><input type="radio" name="sampleSize" value="5"> 5×5</label>
+        </div>
+      </div>
+
+      <hr>
+
+      <div class="results-section">
+        <h3>Gradient Preview</h3>
+        <div class="gradient-preview" id="gradientPreview">
+          <span class="placeholder-text">Load an image to see the gradient</span>
+        </div>
+      </div>
+
+      <div class="results-section">
+        <h3>Sampled Colors</h3>
+        <div class="color-list" id="colorList">
+          <span class="placeholder-text">No colors sampled yet</span>
+        </div>
+      </div>
+
+      <div class="copy-buttons">
+        <button class="btn btn-copy" id="copyCssBtn" disabled>Copy CSS Gradient</button>
+        <button class="btn btn-copy" id="copyColorsBtn" disabled>Copy Colors</button>
+        <button class="btn btn-copy" id="copyJsonBtn" disabled>Copy JSON</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="js/main.js?v=3"></script>
+</body>
+</html>
