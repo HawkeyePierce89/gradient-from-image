@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildLineFromSettings,
   clampLineToBounds,
+  clipLineToRect,
   getSamplingPercents,
   getPointOnLine,
 } from '../js/geometry.js';
@@ -89,18 +90,86 @@ describe('clampLineToBounds', () => {
     expect(clampLineToBounds(line, 100, 100)).toEqual(line);
   });
 
-  it('clamps negative coordinates to 0', () => {
+  it('clips line preserving angle when endpoints are outside', () => {
     const line = { x1: -10, y1: -5, x2: 50, y2: 50 };
     const result = clampLineToBounds(line, 100, 100);
-    expect(result.x1).toBe(0);
-    expect(result.y1).toBe(0);
+    // Clipped at the boundary, angle preserved
+    expect(result.x1).toBeGreaterThanOrEqual(0);
+    expect(result.y1).toBeGreaterThanOrEqual(0);
+    expect(result.x2).toBe(50);
+    expect(result.y2).toBe(50);
+    // Verify angle is preserved
+    const origSlope = (line.y2 - line.y1) / (line.x2 - line.x1);
+    const clipSlope = (result.y2 - result.y1) / (result.x2 - result.x1);
+    expect(clipSlope).toBeCloseTo(origSlope, 0);
   });
 
-  it('clamps coordinates exceeding image dimensions', () => {
+  it('clips line preserving angle when exceeding image dimensions', () => {
     const line = { x1: 50, y1: 50, x2: 200, y2: 150 };
     const result = clampLineToBounds(line, 100, 100);
+    expect(result.x1).toBe(50);
+    expect(result.y1).toBe(50);
+    expect(result.x2).toBeLessThanOrEqual(99);
+    expect(result.y2).toBeLessThanOrEqual(99);
+    // Verify angle is preserved
+    const origSlope = (line.y2 - line.y1) / (line.x2 - line.x1);
+    const clipSlope = (result.y2 - result.y1) / (result.x2 - result.x1);
+    expect(clipSlope).toBeCloseTo(origSlope, 0);
+  });
+});
+
+describe('clipLineToRect', () => {
+  it('does not change a line already within bounds', () => {
+    const line = { x1: 10, y1: 20, x2: 90, y2: 80 };
+    expect(clipLineToRect(line, 100, 100)).toEqual(line);
+  });
+
+  it('clips a diagonal line extending beyond bounds while preserving angle', () => {
+    // Line from (-50, -50) to (150, 150) through a 100x100 image
+    const line = { x1: -50, y1: -50, x2: 150, y2: 150 };
+    const result = clipLineToRect(line, 100, 100);
+    // Should clip to the rectangle, preserving 45-degree angle
+    expect(result.x1).toBe(0);
+    expect(result.y1).toBe(0);
     expect(result.x2).toBe(99);
     expect(result.y2).toBe(99);
+  });
+
+  it('preserves angle for offset diagonal lines', () => {
+    // A diagonal line shifted up: one end out of bounds more than the other
+    // Line from (-20, -30) to (180, 70) in 200x100 image
+    const line = { x1: -20, y1: -30, x2: 180, y2: 70 };
+    const result = clipLineToRect(line, 200, 100);
+    // The clipped line should maintain the same slope
+    const originalSlope = (line.y2 - line.y1) / (line.x2 - line.x1);
+    const clippedSlope = (result.y2 - result.y1) / (result.x2 - result.x1);
+    expect(clippedSlope).toBeCloseTo(originalSlope, 1);
+  });
+
+  it('handles horizontal line outside bounds', () => {
+    const line = { x1: -10, y1: 50, x2: 110, y2: 50 };
+    const result = clipLineToRect(line, 100, 100);
+    expect(result.x1).toBe(0);
+    expect(result.y1).toBe(50);
+    expect(result.x2).toBe(99);
+    expect(result.y2).toBe(50);
+  });
+
+  it('handles vertical line outside bounds', () => {
+    const line = { x1: 50, y1: -10, x2: 50, y2: 110 };
+    const result = clipLineToRect(line, 100, 100);
+    expect(result.x1).toBe(50);
+    expect(result.y1).toBe(0);
+    expect(result.x2).toBe(50);
+    expect(result.y2).toBe(99);
+  });
+
+  it('handles line entirely outside bounds', () => {
+    const line = { x1: -50, y1: -50, x2: -10, y2: -10 };
+    const result = clipLineToRect(line, 100, 100);
+    // Degenerate case — endpoints clamped
+    expect(result.x1).toBeGreaterThanOrEqual(0);
+    expect(result.y1).toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -216,6 +285,31 @@ describe('buildLineFromSettings', () => {
     expect(line.y1).toBe(line.y2);
     expect(line.x1).toBe(0);
     expect(line.x2).toBe(199);
+  });
+
+  it('diagonal lines maintain consistent angle across offsets', () => {
+    const imgW = 200;
+    const imgH = 100;
+    // Get the angle at offset 50 (baseline)
+    const baseLine = buildLineFromSettings(imgW, imgH, {
+      direction: 'diagonal-tl-br',
+      traversalDirection: 'forward',
+      offsetPercent: 50,
+    });
+    const baseAngle = Math.atan2(baseLine.y2 - baseLine.y1, baseLine.x2 - baseLine.x1);
+
+    // Test several offsets — they should all have the same angle
+    for (const offset of [0, 10, 25, 75, 90, 100]) {
+      const line = buildLineFromSettings(imgW, imgH, {
+        direction: 'diagonal-tl-br',
+        traversalDirection: 'forward',
+        offsetPercent: offset,
+      });
+      // Skip degenerate lines (fully clipped to a point)
+      if (line.x1 === line.x2 && line.y1 === line.y2) continue;
+      const angle = Math.atan2(line.y2 - line.y1, line.x2 - line.x1);
+      expect(angle).toBeCloseTo(baseAngle, 1);
+    }
   });
 
   it('clamps offset to 0-100 range', () => {

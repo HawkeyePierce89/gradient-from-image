@@ -8,6 +8,7 @@ import { buildCssGradient, buildColorsList, buildJson, copyToClipboard, showToas
 import { renderOverlay } from './overlay.js';
 import { initCrop } from './crop.js';
 import { initZoom } from './zoom.js';
+import { initLineDrag } from './line-drag.js';
 
 // ── State ──
 const state = {
@@ -59,9 +60,11 @@ const stepSlider = $('stepSlider');
 const stepInput = $('stepInput');
 const stepValue = $('stepValue');
 
-// ── Crop manager + Zoom ──
+// ── Crop manager + Zoom + Line drag ──
 let cropManager = null;
 let zoomManager = null;
+let lineDragManager = null;
+let currentLine = null;
 
 // ── Image Loading ──
 uploadBtn.addEventListener('click', () => fileInput.click());
@@ -146,6 +149,30 @@ function showImageUI(img) {
       }
     }
   );
+
+  // Re-init line drag
+  if (lineDragManager) lineDragManager.destroy();
+  lineDragManager = initLineDrag({
+    overlayCanvas,
+    viewport: canvasViewport,
+    viewportToCanvas: (...args) => zoomManager.viewportToCanvas(...args),
+    getState: () => ({
+      direction: state.settings.direction,
+      displayScale: state.displayScale,
+      imageWidth: state.imageWidth,
+      imageHeight: state.imageHeight,
+      cropMode: state.cropMode,
+      offsetPercent: state.settings.offsetPercent,
+      line: currentLine,
+    }),
+    onOffsetChange: (newOffset) => {
+      offsetSlider.value = newOffset;
+      offsetInput.value = newOffset;
+      offsetValue.textContent = `${newOffset}%`;
+      state.settings.offsetPercent = newOffset;
+      updateAnalysis();
+    },
+  });
 }
 
 // ── Crop ──
@@ -262,6 +289,7 @@ function updateAnalysis() {
   if (!state.imageData || state.cropMode) return;
 
   const line = buildLineFromSettings(state.imageWidth, state.imageHeight, state.settings);
+  currentLine = line;
   const points = sampleColorsAlongLine(state.imageData, state.imageWidth, state.imageHeight, line, state.settings);
   state.sampledPoints = points;
 

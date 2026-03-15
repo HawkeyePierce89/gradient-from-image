@@ -69,11 +69,62 @@ function applyDiagonalOffset(baseLine, offsetPercent, imgW, imgH) {
 }
 
 export function clampLineToBounds(line, imageWidth, imageHeight) {
+  return clipLineToRect(line, imageWidth, imageHeight);
+}
+
+/**
+ * Liang-Barsky parametric line clipping against an axis-aligned rectangle [0, maxX] x [0, maxY].
+ * Preserves line direction/angle — both endpoints are clipped consistently.
+ */
+export function clipLineToRect(line, imageWidth, imageHeight) {
+  const maxX = imageWidth - 1;
+  const maxY = imageHeight - 1;
+  const dx = line.x2 - line.x1;
+  const dy = line.y2 - line.y1;
+
+  // p, q arrays for the four edges: left, right, top, bottom
+  const p = [-dx, dx, -dy, dy];
+  const q = [line.x1, maxX - line.x1, line.y1, maxY - line.y1];
+
+  let t0 = 0;
+  let t1 = 1;
+
+  for (let i = 0; i < 4; i++) {
+    if (p[i] === 0) {
+      // Line is parallel to this edge — reject if outside
+      if (q[i] < 0) {
+        // Entirely outside; return a degenerate clamped line
+        return {
+          x1: clampValue(line.x1, 0, maxX),
+          y1: clampValue(line.y1, 0, maxY),
+          x2: clampValue(line.x2, 0, maxX),
+          y2: clampValue(line.y2, 0, maxY),
+        };
+      }
+    } else {
+      const t = q[i] / p[i];
+      if (p[i] < 0) {
+        t0 = Math.max(t0, t);
+      } else {
+        t1 = Math.min(t1, t);
+      }
+      if (t0 > t1) {
+        // Line is entirely outside the rectangle
+        return {
+          x1: clampValue(line.x1, 0, maxX),
+          y1: clampValue(line.y1, 0, maxY),
+          x2: clampValue(line.x2, 0, maxX),
+          y2: clampValue(line.y2, 0, maxY),
+        };
+      }
+    }
+  }
+
   return {
-    x1: clampValue(line.x1, 0, imageWidth - 1),
-    y1: clampValue(line.y1, 0, imageHeight - 1),
-    x2: clampValue(line.x2, 0, imageWidth - 1),
-    y2: clampValue(line.y2, 0, imageHeight - 1),
+    x1: Math.round(line.x1 + t0 * dx),
+    y1: Math.round(line.y1 + t0 * dy),
+    x2: Math.round(line.x1 + t1 * dx),
+    y2: Math.round(line.y1 + t1 * dy),
   };
 }
 
