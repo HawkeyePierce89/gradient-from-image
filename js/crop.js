@@ -6,7 +6,7 @@ import { renderCropOverlay, getCropHandles } from './overlay.js';
 
 const HANDLE_HIT = 10;
 
-export function initCrop(overlayCanvas, getDisplayScale, getImageDims, callbacks) {
+export function initCrop(overlayCanvas, getDisplayScale, getImageDims, viewportToCanvas, viewport, callbacks) {
   let active = false;
   let cropRect = null; // in image coordinates
   let dragging = null; // { type: 'move' | 'create' | handle-index, startX, startY, startRect }
@@ -17,8 +17,8 @@ export function initCrop(overlayCanvas, getDisplayScale, getImageDims, callbacks
   }
 
   function getCanvasPos(e) {
-    const rect = overlayCanvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const rect = viewport.getBoundingClientRect();
+    return viewportToCanvas(e.clientX - rect.left, e.clientY - rect.top);
   }
 
   function hitTestHandle(px, py) {
@@ -75,25 +75,27 @@ export function initCrop(overlayCanvas, getDisplayScale, getImageDims, callbacks
       dragging = { type: 'create', startX: pos.x, startY: pos.y, startRect: { ...cropRect } };
     }
     redraw();
+    window.addEventListener('mousemove', onDragMove);
+    window.addEventListener('mouseup', onDragEnd);
   }
 
-  function onMouseMove(e) {
-    if (!active) return;
+  function onHoverMove(e) {
+    if (!active || dragging) return;
     const pos = getCanvasPos(e);
-
-    if (!dragging) {
-      // Update cursor
-      const handleIdx = hitTestHandle(pos.x, pos.y);
-      if (handleIdx >= 0) {
-        const cursors = ['nw-resize', 'n-resize', 'ne-resize', 'e-resize', 'se-resize', 's-resize', 'sw-resize', 'w-resize'];
-        overlayCanvas.style.cursor = cursors[handleIdx];
-      } else if (isInsideCrop(pos.x, pos.y)) {
-        overlayCanvas.style.cursor = 'move';
-      } else {
-        overlayCanvas.style.cursor = 'crosshair';
-      }
-      return;
+    const handleIdx = hitTestHandle(pos.x, pos.y);
+    if (handleIdx >= 0) {
+      const cursors = ['nw-resize', 'n-resize', 'ne-resize', 'e-resize', 'se-resize', 's-resize', 'sw-resize', 'w-resize'];
+      overlayCanvas.style.cursor = cursors[handleIdx];
+    } else if (isInsideCrop(pos.x, pos.y)) {
+      overlayCanvas.style.cursor = 'move';
+    } else {
+      overlayCanvas.style.cursor = 'crosshair';
     }
+  }
+
+  function onDragMove(e) {
+    if (!dragging) return;
+    const pos = getCanvasPos(e);
 
     const s = getDisplayScale();
     const dx = (pos.x - dragging.startX) / s;
@@ -111,7 +113,6 @@ export function initCrop(overlayCanvas, getDisplayScale, getImageDims, callbacks
       const y2 = Math.max(startImg.y, imgPt.y);
       cropRect = clampRect({ x: x1, y: y1, width: x2 - x1, height: y2 - y1 });
     } else {
-      // Handle resize
       cropRect = resizeByHandle(dragging.type, sr, dx, dy);
     }
 
@@ -119,8 +120,10 @@ export function initCrop(overlayCanvas, getDisplayScale, getImageDims, callbacks
     if (callbacks.onCropChange) callbacks.onCropChange(cropRect);
   }
 
-  function onMouseUp() {
+  function onDragEnd() {
     dragging = null;
+    window.removeEventListener('mousemove', onDragMove);
+    window.removeEventListener('mouseup', onDragEnd);
   }
 
   function resizeByHandle(handleIdx, sr, dx, dy) {
@@ -165,9 +168,7 @@ export function initCrop(overlayCanvas, getDisplayScale, getImageDims, callbacks
     });
     overlayCanvas.classList.add('crop-active');
     overlayCanvas.addEventListener('mousedown', onMouseDown);
-    overlayCanvas.addEventListener('mousemove', onMouseMove);
-    overlayCanvas.addEventListener('mouseup', onMouseUp);
-    overlayCanvas.addEventListener('mouseleave', onMouseUp);
+    overlayCanvas.addEventListener('mousemove', onHoverMove);
     redraw();
     if (callbacks.onCropChange) callbacks.onCropChange(cropRect);
   }
@@ -176,9 +177,9 @@ export function initCrop(overlayCanvas, getDisplayScale, getImageDims, callbacks
     active = false;
     overlayCanvas.classList.remove('crop-active');
     overlayCanvas.removeEventListener('mousedown', onMouseDown);
-    overlayCanvas.removeEventListener('mousemove', onMouseMove);
-    overlayCanvas.removeEventListener('mouseup', onMouseUp);
-    overlayCanvas.removeEventListener('mouseleave', onMouseUp);
+    overlayCanvas.removeEventListener('mousemove', onHoverMove);
+    window.removeEventListener('mousemove', onDragMove);
+    window.removeEventListener('mouseup', onDragEnd);
     overlayCanvas.style.cursor = '';
   }
 

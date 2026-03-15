@@ -28,9 +28,12 @@ describe('initCrop', () => {
   const getDisplayScale = () => 0.5;
   const getImageDims = () => ({ width: 1600, height: 1200 });
 
+  const mockViewportToCanvas = (vx, vy) => ({ x: vx, y: vy });
+  const mockViewport = { getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }) };
+
   beforeEach(() => {
     canvas = createMockOverlayCanvas();
-    cropManager = initCrop(canvas, getDisplayScale, getImageDims, {
+    cropManager = initCrop(canvas, getDisplayScale, getImageDims, mockViewportToCanvas, mockViewport, {
       onCropChange: vi.fn(),
       onCropReset: vi.fn(),
     });

@@ -135,6 +135,8 @@ function showImageUI(img) {
     overlayCanvas,
     () => state.displayScale,
     () => ({ width: state.imageWidth, height: state.imageHeight }),
+    zoomManager.viewportToCanvas,
+    canvasViewport,
     {
       onCropChange: () => {},
       onCropReset: () => {
