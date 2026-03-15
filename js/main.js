@@ -218,6 +218,18 @@ resetCropBtn.addEventListener('click', () => {
   resetCropBtn.hidden = true;
 });
 
+// ── Crop keyboard shortcuts ──
+document.addEventListener('keydown', (e) => {
+  if (!state.cropMode) return;
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    applyCropBtn.click();
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    resetCropBtn.click();
+  }
+});
+
 // ── Zoom ──
 zoomInBtn.addEventListener('click', () => { if (zoomManager) zoomManager.zoomIn(); });
 zoomOutBtn.addEventListener('click', () => { if (zoomManager) zoomManager.zoomOut(); });
